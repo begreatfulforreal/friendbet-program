@@ -1,0 +1,24 @@
+[toolchain]
+package_manager = "yarn"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+solana_betting_system = "BNrkDdFZ6dCaqM1A6wsTkqx7wUafz6zeycH2sm9mWPK8"
+
+[programs.devnet]
+solana_betting_system = "BNrkDdFZ6dCaqM1A6wsTkqx7wUafz6zeycH2sm9mWPK8"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+build = "anchor build"
+deploy = "anchor deploy"
+test = "yarn run mocha -t 1000000 tests/"

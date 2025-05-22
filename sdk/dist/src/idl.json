@@ -1,0 +1,516 @@
+{
+    "address": "BNrkDdFZ6dCaqM1A6wsTkqx7wUafz6zeycH2sm9mWPK8",
+    "metadata": {
+        "name": "solana_betting_system",
+        "version": "0.1.0",
+        "spec": "0.1.0",
+        "description": "Created with Anchor"
+    },
+    "instructions": [
+        {
+            "name": "claim_funds",
+            "discriminator": [
+                145,
+                36,
+                143,
+                242,
+                168,
+                66,
+                200,
+                155
+            ],
+            "accounts": [
+                {
+                    "name": "claimer",
+                    "writable": true,
+                    "signer": true
+                },
+                {
+                    "name": "bet",
+                    "writable": true
+                },
+                {
+                    "name": "bet_escrow",
+                    "writable": true
+                },
+                {
+                    "name": "claimer_token_account",
+                    "writable": true
+                },
+                {
+                    "name": "token_program",
+                    "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+                }
+            ],
+            "args": []
+        },
+        {
+            "name": "create_bet",
+            "discriminator": [
+                197,
+                42,
+                153,
+                2,
+                59,
+                63,
+                143,
+                246
+            ],
+            "accounts": [
+                {
+                    "name": "better",
+                    "writable": true,
+                    "signer": true
+                },
+                {
+                    "name": "market",
+                    "writable": true
+                },
+                {
+                    "name": "bet",
+                    "writable": true,
+                    "pda": {
+                        "seeds": [
+                            {
+                                "kind": "const",
+                                "value": [
+                                    98,
+                                    101,
+                                    116
+                                ]
+                            },
+                            {
+                                "kind": "account",
+                                "path": "market"
+                            },
+                            {
+                                "kind": "account",
+                                "path": "market.bet_count",
+                                "account": "BettingMarket"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "bet_escrow",
+                    "writable": true,
+                    "signer": true
+                },
+                {
+                    "name": "better_token_account",
+                    "writable": true
+                },
+                {
+                    "name": "mint"
+                },
+                {
+                    "name": "token_program",
+                    "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+                },
+                {
+                    "name": "system_program",
+                    "address": "11111111111111111111111111111111"
+                },
+                {
+                    "name": "rent",
+                    "address": "SysvarRent111111111111111111111111111111111"
+                }
+            ],
+            "args": [
+                {
+                    "name": "bet_amount",
+                    "type": "u64"
+                },
+                {
+                    "name": "price_threshold",
+                    "type": "u64"
+                },
+                {
+                    "name": "price_direction",
+                    "type": {
+                        "defined": {
+                            "name": "PriceDirection"
+                        }
+                    }
+                },
+                {
+                    "name": "settlement_time",
+                    "type": "i64"
+                }
+            ]
+        },
+        {
+            "name": "initialize_market",
+            "discriminator": [
+                35,
+                35,
+                189,
+                193,
+                155,
+                48,
+                170,
+                203
+            ],
+            "accounts": [
+                {
+                    "name": "authority",
+                    "writable": true,
+                    "signer": true
+                },
+                {
+                    "name": "market",
+                    "writable": true,
+                    "pda": {
+                        "seeds": [
+                            {
+                                "kind": "const",
+                                "value": [
+                                    109,
+                                    97,
+                                    114,
+                                    107,
+                                    101,
+                                    116
+                                ]
+                            },
+                            {
+                                "kind": "account",
+                                "path": "authority"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "system_program",
+                    "address": "11111111111111111111111111111111"
+                }
+            ],
+            "args": [
+                {
+                    "name": "token_name",
+                    "type": "string"
+                },
+                {
+                    "name": "oracle_address",
+                    "type": "pubkey"
+                }
+            ]
+        },
+        {
+            "name": "match_bet",
+            "discriminator": [
+                48,
+                221,
+                200,
+                183,
+                19,
+                70,
+                27,
+                155
+            ],
+            "accounts": [
+                {
+                    "name": "matcher",
+                    "writable": true,
+                    "signer": true
+                },
+                {
+                    "name": "bet",
+                    "writable": true
+                },
+                {
+                    "name": "bet_escrow",
+                    "writable": true
+                },
+                {
+                    "name": "matcher_token_account",
+                    "writable": true
+                },
+                {
+                    "name": "token_program",
+                    "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+                }
+            ],
+            "args": []
+        },
+        {
+            "name": "settle_bet",
+            "discriminator": [
+                115,
+                55,
+                234,
+                177,
+                227,
+                4,
+                10,
+                67
+            ],
+            "accounts": [
+                {
+                    "name": "authority",
+                    "signer": true
+                },
+                {
+                    "name": "bet",
+                    "writable": true
+                },
+                {
+                    "name": "market"
+                },
+                {
+                    "name": "price_feed"
+                }
+            ],
+            "args": []
+        }
+    ],
+    "accounts": [
+        {
+            "name": "Bet",
+            "discriminator": [
+                147,
+                23,
+                35,
+                59,
+                15,
+                75,
+                155,
+                32
+            ]
+        },
+        {
+            "name": "BettingMarket",
+            "discriminator": [
+                227,
+                130,
+                231,
+                148,
+                180,
+                228,
+                97,
+                28
+            ]
+        }
+    ],
+    "events": [
+        {
+            "name": "BetSettled",
+            "discriminator": [
+                57,
+                145,
+                224,
+                160,
+                62,
+                119,
+                227,
+                206
+            ]
+        }
+    ],
+    "errors": [
+        {
+            "code": 6000,
+            "name": "InvalidSettlementTime",
+            "msg": "Settlement time must be in the future"
+        },
+        {
+            "code": 6001,
+            "name": "BetAlreadyMatched",
+            "msg": "Bet is already matched"
+        },
+        {
+            "code": 6002,
+            "name": "BetAlreadySettled",
+            "msg": "Bet is already settled"
+        },
+        {
+            "code": 6003,
+            "name": "BetNotMatched",
+            "msg": "Bet is not matched yet"
+        },
+        {
+            "code": 6004,
+            "name": "SettlementTimeTooEarly",
+            "msg": "Current time is before settlement time"
+        },
+        {
+            "code": 6005,
+            "name": "BetNotSettled",
+            "msg": "Bet is not settled yet"
+        },
+        {
+            "code": 6006,
+            "name": "NotWinner",
+            "msg": "Only the winner can claim funds"
+        },
+        {
+            "code": 6007,
+            "name": "BetExpired",
+            "msg": "Bet has expired and can no longer be matched"
+        },
+        {
+            "code": 6008,
+            "name": "SettlementTimeTooClose",
+            "msg": "Settlement time must be at least 1 hour in the future"
+        },
+        {
+            "code": 6009,
+            "name": "StaleOracleData",
+            "msg": "Oracle data is stale"
+        },
+        {
+            "code": 6010,
+            "name": "PriceConversionError",
+            "msg": "Error converting price data"
+        },
+        {
+            "code": 6011,
+            "name": "PriceFeedLoadError",
+            "msg": "Failed to load price feed"
+        }
+    ],
+    "types": [
+        {
+            "name": "Bet",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    {
+                        "name": "market",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "better",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "amount",
+                        "type": "u64"
+                    },
+                    {
+                        "name": "price_threshold",
+                        "type": "u64"
+                    },
+                    {
+                        "name": "price_direction",
+                        "type": {
+                            "defined": {
+                                "name": "PriceDirection"
+                            }
+                        }
+                    },
+                    {
+                        "name": "settlement_time",
+                        "type": "i64"
+                    },
+                    {
+                        "name": "is_matched",
+                        "type": "bool"
+                    },
+                    {
+                        "name": "is_settled",
+                        "type": "bool"
+                    },
+                    {
+                        "name": "winner",
+                        "type": {
+                            "option": "pubkey"
+                        }
+                    },
+                    {
+                        "name": "matcher",
+                        "type": {
+                            "option": "pubkey"
+                        }
+                    },
+                    {
+                        "name": "escrow",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "bump",
+                        "type": "u8"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "BetSettled",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    {
+                        "name": "bet",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "market",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "current_price",
+                        "type": "u64"
+                    },
+                    {
+                        "name": "price_threshold",
+                        "type": "u64"
+                    },
+                    {
+                        "name": "price_direction",
+                        "type": {
+                            "defined": {
+                                "name": "PriceDirection"
+                            }
+                        }
+                    },
+                    {
+                        "name": "winner",
+                        "type": "pubkey"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "BettingMarket",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    {
+                        "name": "authority",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "token_name",
+                        "type": "string"
+                    },
+                    {
+                        "name": "oracle_address",
+                        "type": "pubkey"
+                    },
+                    {
+                        "name": "bet_count",
+                        "type": "u64"
+                    },
+                    {
+                        "name": "bump",
+                        "type": "u8"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "PriceDirection",
+            "type": {
+                "kind": "enum",
+                "variants": [
+                    {
+                        "name": "Above"
+                    },
+                    {
+                        "name": "Below"
+                    }
+                ]
+            }
+        }
+    ]
+}
