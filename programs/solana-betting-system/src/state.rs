@@ -64,17 +64,13 @@ impl Bet {
         1; // bump
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PriceDirection {
+    #[default]
     Above,
     Below,
 }
 
-impl Default for PriceDirection {
-    fn default() -> Self {
-        PriceDirection::Above
-    }
-}
 
 // Fee constants
 pub const FEE_PERCENTAGE: u64 = 3; // 3% fee
