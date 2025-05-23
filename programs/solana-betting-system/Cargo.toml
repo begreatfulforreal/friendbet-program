@@ -1,12 +1,12 @@
 [package]
 description = "Created with Anchor"
 edition = "2021"
-name = "solana-betting-system"
+name = "betfriend"
 version = "0.1.0"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "solana_betting_system"
+name = "betfriend"
 
 [features]
 cpi = ["no-entrypoint"]

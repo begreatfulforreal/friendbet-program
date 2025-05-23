@@ -46,6 +46,9 @@ pub fn match_bet(ctx: Context<MatchBet>) -> Result<()> {
     // Ensure bet is not settled
     require!(!bet.is_settled, ErrorCode::BetAlreadySettled);
 
+    // Ensure bet is funded before it can be matched
+    require!(bet.is_funded, ErrorCode::BetNotFunded);
+
     // Ensure the current time is before settlement time
     let current_time = Clock::get()?.unix_timestamp;
     require!(current_time < bet.settlement_time, ErrorCode::BetExpired);
@@ -56,7 +59,7 @@ pub fn match_bet(ctx: Context<MatchBet>) -> Result<()> {
         to: ctx.accounts.bet_escrow.to_account_info(),
         authority: ctx.accounts.matcher.to_account_info(),
     };
-    let cpi_ctx = CpiContext::new( ctx.accounts.token_program.to_account_info(), cpi_accounts);
+    let cpi_ctx = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
     token::transfer(cpi_ctx, bet.amount)?;
 
     // Update bet

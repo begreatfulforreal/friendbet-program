@@ -40,6 +40,8 @@ pub struct Bet {
     pub settlement_time: i64,
     pub is_matched: bool,
     pub is_settled: bool,
+    pub is_funded: bool,        // New: tracks if the bet has been funded
+    pub created_by_admin: bool, // New: tracks if bet was created by admin for another user
     pub winner: Option<Pubkey>,
     pub matcher: Option<Pubkey>,
     pub escrow: Pubkey,
@@ -57,6 +59,8 @@ impl Bet {
         8 +                // settlement_time
         1 +                // is_matched
         1 +                // is_settled
+        1 +                // is_funded (new)
+        1 +                // created_by_admin (new)
         1 + 32 +           // winner (Option<Pubkey>)
         1 + 32 +           // matcher (Option<Pubkey>)
         32 +               // escrow
@@ -70,7 +74,6 @@ pub enum PriceDirection {
     Above,
     Below,
 }
-
 
 // Fee constants
 pub const FEE_PERCENTAGE: u64 = 3; // 3% fee

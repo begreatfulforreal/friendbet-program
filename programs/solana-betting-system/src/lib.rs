@@ -10,16 +10,16 @@ use errors::ErrorCode;
 use instructions::*;
 use state::*;
 
-declare_id!("BNrkDdFZ6dCaqM1A6wsTkqx7wUafz6zeycH2sm9mWPK8");
+declare_id!("41EgGLeaaY1RH2PjDz5HFH38mrufhLTHQ2FczoSQnCTx");
 
 // Admin pubkey constant - replace with your actual admin pubkey
-const ADMIN: &str = "11111111111111111111111111111111";
+const ADMIN: &str = "8kvqgxQG77pv6RvEou8f2kHSWi3rtx8F7MksXUqNLGmn";
 
 // Hardcoded USDC mint address
 pub const USDC_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 #[program]
-pub mod solana_betting_system {
+pub mod betfriend {
     use super::*;
 
     #[access_control(enforce_admin(ctx.accounts.authority.key))]
@@ -51,6 +51,31 @@ pub mod solana_betting_system {
             price_direction,
             settlement_time,
         )
+    }
+
+    #[access_control(enforce_admin(ctx.accounts.admin.key))]
+    pub fn create_bet_for_user(
+        ctx: Context<CreateBetForUser>,
+        bet_amount: u64,
+        price_threshold: u64,
+        price_direction: PriceDirection,
+        settlement_time: i64,
+        better_pubkey: Pubkey,
+        fund_immediately: bool,
+    ) -> Result<()> {
+        instructions::create_bet_for_user::create_bet_for_user(
+            ctx,
+            bet_amount,
+            price_threshold,
+            price_direction,
+            settlement_time,
+            better_pubkey,
+            fund_immediately,
+        )
+    }
+
+    pub fn fund_bet(ctx: Context<FundBet>) -> Result<()> {
+        instructions::fund_bet::fund_bet(ctx)
     }
 
     pub fn match_bet(ctx: Context<MatchBet>) -> Result<()> {

@@ -36,4 +36,8 @@ pub enum ErrorCode {
     InvalidPriceThreshold,
     #[msg("Only the admin can call this function")]
     OnlyAdmin,
+    #[msg("Bet is already funded")]
+    BetAlreadyFunded,
+    #[msg("Bet is not funded yet")]
+    BetNotFunded,
 }

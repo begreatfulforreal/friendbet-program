@@ -6,10 +6,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-solana_betting_system = "BNrkDdFZ6dCaqM1A6wsTkqx7wUafz6zeycH2sm9mWPK8"
+betfriend = "BNrkDdFZ6dCaqM1A6wsTkqx7wUafz6zeycH2sm9mWPK8"
 
 [programs.devnet]
-solana_betting_system = "BNrkDdFZ6dCaqM1A6wsTkqx7wUafz6zeycH2sm9mWPK8"
+betfriend = "BNrkDdFZ6dCaqM1A6wsTkqx7wUafz6zeycH2sm9mWPK8"
 
 [registry]
 url = "https://api.apr.dev"
