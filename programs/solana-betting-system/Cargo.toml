@@ -8,10 +8,6 @@ version = "0.1.0"
 crate-type = ["cdylib", "lib"]
 name = "friendbet"
 
-[[bin]]
-name = "test_feed_id"
-path = "../../src/bin/test_feed_id.rs"
-
 [features]
 cpi = ["no-entrypoint"]
 default = []
