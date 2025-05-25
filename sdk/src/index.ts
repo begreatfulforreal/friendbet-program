@@ -12,8 +12,6 @@ import {
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import idl from "../../target/idl/friendbet.json" with { type: "json" };
 import type {Friendbet} from "../../target/types/friendbet";
-type BettingMarket = IdlAccounts<Friendbet>["bettingMarket"];
-type Bet = IdlAccounts<Friendbet>["bet"];
 
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 const ADMIN_ADDRESS = new PublicKey("8kvqgxQG77pv6RvEou8f2kHSWi3rtx8F7MksXUqNLGmn");
@@ -52,9 +50,11 @@ export class FriendbetSDK {
   /**
    * Find a market account PDA
    */
-  async findMarketAddress(authority: PublicKey): Promise<[PublicKey, number]> {
+  async findMarketAddress(feedIdHex: string): Promise<[PublicKey, number]> {
+    // Convert hex string to bytes and take first 8 bytes for PDA derivation
+    const feedIdBytes = Buffer.from(feedIdHex.replace('0x', ''), 'hex');
     return PublicKey.findProgramAddressSync(
-      [Buffer.from("market"), authority.toBuffer()],
+      [Buffer.from("market"), feedIdBytes.subarray(0, 8)],
       this.programId
     );
   }
@@ -81,16 +81,17 @@ export class FriendbetSDK {
    */
   async initializeMarket(
     tokenName: string,
-    oracleAddress: PublicKey,
-    feeClaimer: PublicKey
+    feeClaimer: PublicKey,
+    feedIdHex: string
   ): Promise<string> {
     const authority = this.provider.wallet.publicKey;
-    const [marketPda, _] = await this.findMarketAddress(authority);
+    const [marketPda, _] = await this.findMarketAddress(feedIdHex);
 
     const tx = await this.program.methods
-      .initializeMarket(tokenName, oracleAddress, feeClaimer)
+      .initializeMarket(tokenName, feeClaimer, feedIdHex)
       .accounts({
         authority,
+        market: marketPda,
       })
       .rpc();
 
@@ -112,13 +113,10 @@ export class FriendbetSDK {
   }
 
   // create bet
-  async createBet(marketId: PublicKey, amount: number) {
+  async createBet(marketId: PublicKey, amount: number, feedIdHex: string) {
     const betCount = (await this.findBetCountForMarket(marketId)).toNumber();
 
-    const [bet] = PublicKey.findProgramAddressSync(
-      [Buffer.from("bet"), Buffer.from((betCount + 1).toString())],
-      this.program.programId
-    );
+    const [bet] = await this.findBetAddress(marketId, new BN(betCount + 1));
 
     const betterTokenAccount = getAssociatedTokenAddressSync(
       USDC_MINT,
@@ -128,6 +126,7 @@ export class FriendbetSDK {
     const createBetIx = await this.program.methods
       .createBet(new BN(amount), new BN(0), { above: {} }, new BN(0))
       .accounts({
+        market: marketId,
         betterTokenAccount,
         bet,
         usdcMint: USDC_MINT,
@@ -157,10 +156,7 @@ export class FriendbetSDK {
   async matchBet(marketId: PublicKey, amount: number) {
     const betCount = (await this.findBetCountForMarket(marketId)).toNumber();
 
-    const [bet] = PublicKey.findProgramAddressSync(
-      [Buffer.from("bet"), Buffer.from((betCount + 1).toString())],
-      this.program.programId
-    );
+    const [bet] = await this.findBetAddress(marketId, new BN(betCount));
 
     const betEscrow = getAssociatedTokenAddressSync(USDC_MINT, bet);
 
@@ -172,6 +168,7 @@ export class FriendbetSDK {
     const matchBetIx = await this.program.methods
       .matchBet()
       .accounts({
+        market: marketId,
         betEscrow,
         matcherTokenAccount,
       })
@@ -200,10 +197,7 @@ export class FriendbetSDK {
   async claimFunds(marketId: PublicKey) {
     const betCount = (await this.findBetCountForMarket(marketId)).toNumber();
 
-    const [bet] = PublicKey.findProgramAddressSync(
-      [Buffer.from("bet"), Buffer.from((betCount + 1).toString())],
-      this.program.programId
-    );
+    const [bet] = await this.findBetAddress(marketId, new BN(betCount));
 
     const betEscrow = getAssociatedTokenAddressSync(USDC_MINT, bet);
 
@@ -220,6 +214,7 @@ export class FriendbetSDK {
     const claimBetIx = await this.program.methods
       .claimFunds()
       .accounts({
+        market: marketId,
         betEscrow,
         claimerTokenAccount,
         feeRecipientTokenAccount,
