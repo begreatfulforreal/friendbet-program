@@ -103,7 +103,7 @@ pub fn settle_bet(ctx: Context<SettleBet>) -> Result<()> {
     emit!(BetSettled {
         bet: bet.key(),
         market: market.key(),
-        token_name: market.token_name.clone(),
+        token_name: market.get_token_name(),
         current_price,
         price_threshold: bet.price_threshold,
         price_direction: bet.price_direction,
@@ -112,7 +112,7 @@ pub fn settle_bet(ctx: Context<SettleBet>) -> Result<()> {
 
     msg!(
         "Bet settled for {}: current price {} vs threshold {}",
-        market.token_name,
+        market.get_token_name(),
         current_price,
         bet.price_threshold
     );

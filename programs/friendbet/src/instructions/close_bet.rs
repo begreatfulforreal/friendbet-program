@@ -73,7 +73,7 @@ pub fn close_bet(ctx: Context<CloseBet>) -> Result<()> {
         "Bet closed by creator {}: {} USDC returned from bet on {}. Token account and bet account closed.",
         ctx.accounts.better.key(),
         bet.amount / 1_000_000,
-        market.token_name
+        market.get_token_name()
     );
 
     Ok(())

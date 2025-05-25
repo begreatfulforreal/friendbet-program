@@ -35,7 +35,7 @@ async function main() {
 
   const marketId = await client.initializeMarket(
     "SOL/USD",
-    new PublicKey("11111111111111111111111111111111"),
+    new PublicKey("8kvqgxQG77pv6RvEou8f2kHSWi3rtx8F7MksXUqNLGmn"),
     feedIdHex
   );
 

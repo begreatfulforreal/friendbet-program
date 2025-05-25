@@ -10,7 +10,7 @@ use errors::ErrorCode;
 use instructions::*;
 use state::*;
 
-declare_id!("9EiLX1LoT9DWUjELr3xRYwaos9r9h5LVArqBmkVGGKUT");
+declare_id!("friDwUtQJPFgJ14V4kH5ttdpEFNz4dQcL2ySUswUczu");
 
 // Admin pubkey constant - replace with your actual admin pubkey
 const ADMIN: &str = "8kvqgxQG77pv6RvEou8f2kHSWi3rtx8F7MksXUqNLGmn";

@@ -74,7 +74,7 @@ pub fn match_bet(ctx: Context<MatchBet>) -> Result<()> {
         "Bet matched by {}: {} USDC on {}",
         ctx.accounts.matcher.key(),
         bet.amount,
-        market.token_name
+        market.get_token_name()
     );
 
     Ok(())

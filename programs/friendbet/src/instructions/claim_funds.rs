@@ -116,7 +116,7 @@ pub fn claim_funds(ctx: Context<ClaimFunds>) -> Result<()> {
         ctx.accounts.claimer.key(),
         winner_amount,
         fee_amount,
-        market.token_name
+        market.get_token_name()
     );
 
     Ok(())

@@ -31,7 +31,7 @@ pub fn initialize_market(
     let market = &mut ctx.accounts.market;
     market.authority = ctx.accounts.authority.key();
     market.fee_claimer = fee_claimer;
-    market.token_name = token_name;
+    market.set_token_name(&token_name);
     market.feed_id = feed_id_bytes;
     market.bet_count = 0;
     market.total_volume = 0;
@@ -42,7 +42,7 @@ pub fn initialize_market(
 
     msg!(
         "Betting market initialized for {} using USDC for bets",
-        market.token_name
+        market.get_token_name()
     );
     Ok(())
 }

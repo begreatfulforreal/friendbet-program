@@ -11,13 +11,11 @@ use std::str::FromStr;
     bet_amount: u64,
     price_threshold: u64,
     price_direction: PriceDirection,
-    settlement_time: i64,
-    better_pubkey: Pubkey,
-    fund_immediately: bool
+    settlement_time: i64
 )]
-pub struct CreateBetForUser<'info> {
+pub struct CreateBet<'info> {
     #[account(mut)]
-    pub admin: Signer<'info>,
+    pub better: Signer<'info>,
 
     #[account(
         mut,
@@ -28,7 +26,7 @@ pub struct CreateBetForUser<'info> {
 
     #[account(
         init,
-        payer = admin,
+        payer = better,
         space = Bet::LEN,
         seeds = [b"bet", market.key().as_ref(), &(market.bet_count + 1).to_le_bytes()],
         bump
@@ -42,29 +40,30 @@ pub struct CreateBetForUser<'info> {
 
     #[account(
         init,
-        payer = admin,
+        payer = better,
         token::mint = usdc_mint,
         token::authority = bet,
     )]
     pub bet_escrow: Account<'info, TokenAccount>,
 
-    /// CHECK: This account is manually validated when fund_immediately is true
-    #[account(mut)]
-    pub funder_token_account: Option<UncheckedAccount<'info>>,
+    #[account(
+        mut,
+        constraint = better_token_account.mint == usdc_mint.key(),
+        constraint = better_token_account.owner == better.key()
+    )]
+    pub better_token_account: Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
 }
 
-pub fn create_bet_for_user(
-    ctx: Context<CreateBetForUser>,
+pub fn create_bet(
+    ctx: Context<CreateBet>,
     bet_amount: u64,
     price_threshold: u64,
     price_direction: PriceDirection,
     settlement_time: i64,
-    better_pubkey: Pubkey,
-    fund_immediately: bool,
 ) -> Result<()> {
     let current_time = Clock::get()?.unix_timestamp;
 
@@ -82,22 +81,15 @@ pub fn create_bet_for_user(
     );
     require!(price_threshold > 0, ErrorCode::InvalidPriceThreshold);
 
-    // If funding immediately, validate the funder token account
-    if fund_immediately {
-        let cpi_accounts = Transfer {
-            from: ctx
-                .accounts
-                .funder_token_account
-                .as_ref()
-                .unwrap()
-                .to_account_info(),
-            to: ctx.accounts.bet_escrow.to_account_info(),
-            authority: ctx.accounts.admin.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        token::transfer(cpi_ctx, bet_amount)?;
-    }
+    // Transfer USDC from better to bet escrow
+    let cpi_accounts = Transfer {
+        from: ctx.accounts.better_token_account.to_account_info(),
+        to: ctx.accounts.bet_escrow.to_account_info(),
+        authority: ctx.accounts.better.to_account_info(),
+    };
+    let cpi_program = ctx.accounts.token_program.to_account_info();
+    let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+    token::transfer(cpi_ctx, bet_amount)?;
 
     // Increment bet count first so we store the accurate count in the bet
     let bet_count = ctx.accounts.market.bet_count + 1;
@@ -105,15 +97,15 @@ pub fn create_bet_for_user(
     // Update bet account
     let bet = &mut ctx.accounts.bet;
     bet.market = ctx.accounts.market.key();
-    bet.better = better_pubkey; // Set the actual better's pubkey, not the admin's
+    bet.better = ctx.accounts.better.key();
     bet.amount = bet_amount;
     bet.price_threshold = price_threshold;
     bet.price_direction = price_direction;
     bet.settlement_time = settlement_time;
     bet.is_matched = false;
     bet.is_settled = false;
-    bet.is_funded = fund_immediately; // Set funded status based on whether we funded immediately
-    bet.created_by_admin = true; // Mark as created by admin
+    bet.is_funded = true; // Funded immediately since user provided the funds
+    bet.created_by_admin = false; // Not created by admin
     bet.winner = None;
     bet.matcher = None;
     bet.escrow = ctx.accounts.bet_escrow.key();
@@ -123,29 +115,19 @@ pub fn create_bet_for_user(
     // Update market stats
     let market = &mut ctx.accounts.market;
     market.bet_count = bet_count;
+    market.total_volume = market.total_volume.checked_add(bet_amount).unwrap();
 
-    // Only add to total_volume if funded immediately
-    if fund_immediately {
-        market.total_volume = market.total_volume.checked_add(bet_amount).unwrap();
-    }
-
-    let funding_status = if fund_immediately {
-        "FUNDED"
-    } else {
-        "UNFUNDED"
-    };
     msg!(
-        "Bet created by admin for {}: {} USDC that {} will be trading {} {} ({})",
+        "Bet created by {}: {} USDC that {} will be trading {} {}",
         bet.better,
         bet.amount / 1_000_000,
-        market.token_name,
+        market.get_token_name(),
         if price_direction == PriceDirection::Above {
             "above"
         } else {
             "below"
         },
-        price_threshold,
-        funding_status
+        price_threshold
     );
 
     Ok(())
