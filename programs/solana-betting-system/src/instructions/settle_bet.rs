@@ -2,7 +2,7 @@ use crate::errors::ErrorCode;
 use crate::state::PriceDirection;
 use crate::state::{Bet, BettingMarket};
 use anchor_lang::prelude::*;
-use pyth_sdk_solana::state::SolanaPriceAccount;
+use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 use std::cmp::Ordering;
 
 // Define a constant for the staleness threshold (e.g., 60 seconds)
@@ -33,17 +33,14 @@ pub struct SettleBet<'info> {
 
     #[account(
         mut,
-        seeds = [b"market", market.oracle_address.as_ref()],
+        seeds = [b"market", &market.feed_id[..8]],
         bump = market.bump,
         constraint = market.key() == bet.market
     )]
     pub market: Account<'info, BettingMarket>,
 
-    /// CHECK: This is the Pyth price feed account for the relevant token
-    #[account(
-        constraint = price_feed.key() == market.oracle_address
-    )]
-    pub price_feed: AccountInfo<'info>,
+    /// The Pyth price update account
+    pub price_update: Account<'info, PriceUpdateV2>,
 }
 
 pub fn settle_bet(ctx: Context<SettleBet>) -> Result<()> {
@@ -63,17 +60,18 @@ pub fn settle_bet(ctx: Context<SettleBet>) -> Result<()> {
         ErrorCode::SettlementTimeTooEarly
     );
 
-    // Fetch the latest price from Pyth oracle
-    let price_feed_account_info = &ctx.accounts.price_feed;
-    let price_feed = SolanaPriceAccount::account_info_to_feed(price_feed_account_info).unwrap();
+    // Get the price update account
+    let price_update = &ctx.accounts.price_update;
+
+    // Use the feed ID directly from the market (already in byte array format)
+    let feed_id = &market.feed_id;
 
     // Get current price and ensure it's not stale
-    let pyth_price = price_feed
-        .get_price_no_older_than(current_time, STALENESS_THRESHOLD)
-        .ok_or(ErrorCode::StaleOracleData)?;
+    let pyth_price =
+        price_update.get_price_no_older_than(&Clock::get()?, STALENESS_THRESHOLD, feed_id)?;
 
     // Convert the price to u64 format (normalize based on exponent)
-    let price_exponent = pyth_price.expo;
+    let price_exponent = pyth_price.exponent;
     let current_price = if price_exponent >= 0 {
         u64::try_from(pyth_price.price).map_err(|_| ErrorCode::PriceConversionError)?
             * 10u64.pow(price_exponent as u32)

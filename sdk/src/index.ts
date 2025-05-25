@@ -1,45 +1,45 @@
-import { AnchorProvider, BN, Idl, IdlAccounts, Program } from "@coral-xyz/anchor";
+import { AnchorProvider, BN, Idl, IdlAccounts, Program, Wallet } from "@coral-xyz/anchor";
 import {
+  ComputeBudgetProgram,
   Connection,
   Keypair,
   PublicKey,
   SystemProgram,
   Transaction,
+  TransactionMessage,
+  VersionedTransaction,
 } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
-import idl from "./idl.json" with { type: "json" };
-import type {SolanaBettingSystem} from "./solana_betting_system";
-type BettingMarket = IdlAccounts<SolanaBettingSystem>["bettingMarket"];
-type Bet = IdlAccounts<SolanaBettingSystem>["bet"];
+import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress, getAssociatedTokenAddressSync } from "@solana/spl-token";
+import idl from "../../target/idl/friendbet.json" with { type: "json" };
+import type {Friendbet} from "../../target/types/friendbet";
+type BettingMarket = IdlAccounts<Friendbet>["bettingMarket"];
+type Bet = IdlAccounts<Friendbet>["bet"];
+
+const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+const ADMIN_ADDRESS = new PublicKey("8kvqgxQG77pv6RvEou8f2kHSWi3rtx8F7MksXUqNLGmn");
 
 export enum PriceDirection {
   Above,
   Below,
 }
 
-export class SolanaBettingSDK {
-  private program: Program<SolanaBettingSystem>;
+export class FriendbetSDK {
+  private program: Program<Friendbet>;
   private programId: PublicKey;
+  private userWallet: Wallet;
+  private provider: AnchorProvider;
+  private connection: Connection;
 
-  constructor(private provider: AnchorProvider, programId?: PublicKey) {
+  constructor(connection: Connection, wallet: Keypair, programId?: PublicKey) {
     this.programId = programId || new PublicKey(idl.address);
-    this.program = new Program<SolanaBettingSystem>(idl as Idl);
-  }
-
-  /**
-   * Create a new instance of the SDK
-   */
-  static connect(
-    connection: Connection,
-    wallet: any,
-    programId?: PublicKey
-  ): SolanaBettingSDK {
-    const provider = new AnchorProvider(
+    this.provider = new AnchorProvider(
       connection,
-      wallet,
+      new Wallet(wallet),
       AnchorProvider.defaultOptions()
     );
-    return new SolanaBettingSDK(provider, programId);
+    this.connection = connection;
+    this.program = new Program<Friendbet>(idl as Idl, this.provider);
+    this.userWallet = new Wallet(wallet);
   }
 
   /**
@@ -81,13 +81,14 @@ export class SolanaBettingSDK {
    */
   async initializeMarket(
     tokenName: string,
-    oracleAddress: PublicKey
+    oracleAddress: PublicKey,
+    feeClaimer: PublicKey
   ): Promise<string> {
     const authority = this.provider.wallet.publicKey;
     const [marketPda, _] = await this.findMarketAddress(authority);
 
     const tx = await this.program.methods
-      .initializeMarket(tokenName, oracleAddress)
+      .initializeMarket(tokenName, oracleAddress, feeClaimer)
       .accounts({
         authority,
       })
@@ -96,166 +97,145 @@ export class SolanaBettingSDK {
     return tx;
   }
 
-  /**
-   * Create a new bet
-   */
-  async createBet(
-    market: PublicKey,
-    betAmount: BN,
-    priceThreshold: BN,
-    priceDirection: PriceDirection,
-    settlementTime: BN,
-    mint: PublicKey
-  ): Promise<string> {
-    const better = this.provider.wallet.publicKey;
-
-    // Get the market account to find the bet count
-    const marketAccount = await this.fetchMarket(market);
-
-    // Find the bet PDA
-    const [betPda, _] = await this.findBetAddress(
-      market,
-      marketAccount.betCount
+  async getBettingData(bettingId: string) {
+    const betting = await this.program.account.bet.fetch(
+      new PublicKey(bettingId)
     );
-
-    // Create a new escrow account
-    const betEscrow = Keypair.generate();
-
-    // Get the better's token account
-    const betterTokenAccount = await getAssociatedTokenAddress(mint, better);
-
-    const tx = await this.program.methods
-      .createBet(
-        betAmount,
-        priceThreshold,
-        priceDirection === PriceDirection.Above ? { above: {} } : { below: {} },
-        settlementTime
-      )
-      .accounts({
-        better,
-        market,
-        betEscrow: betEscrow.publicKey,
-        betterTokenAccount,
-        mint,
-      })
-      .signers([betEscrow])
-      .rpc();
-
-    return tx;
+    return betting;
   }
 
-  /**
-   * Match a bet
-   */
-  async matchBet(
-    bet: PublicKey,
-    betEscrow: PublicKey,
-    matcherTokenAccount: PublicKey
-  ): Promise<string> {
-    const matcher = this.provider.wallet.publicKey;
+  async findBetCountForMarket(marketId: PublicKey) {
+    const market = await this.program.account.bettingMarket.fetch(
+      marketId
+    );
+    return market.betCount;
+  }
 
-    const tx = await this.program.methods
+  // create bet
+  async createBet(marketId: PublicKey, amount: number) {
+    const betCount = (await this.findBetCountForMarket(marketId)).toNumber();
+
+    const [bet] = PublicKey.findProgramAddressSync(
+      [Buffer.from("bet"), Buffer.from((betCount + 1).toString())],
+      this.program.programId
+    );
+
+    const betterTokenAccount = getAssociatedTokenAddressSync(
+      USDC_MINT,
+      this.userWallet.publicKey
+    );
+
+    const createBetIx = await this.program.methods
+      .createBet(new BN(amount), new BN(0), { above: {} }, new BN(0))
+      .accounts({
+        betterTokenAccount,
+        bet,
+        usdcMint: USDC_MINT,
+      })
+      .instruction();
+
+    const createBetMessage = new TransactionMessage({
+      payerKey: this.userWallet.publicKey,
+      recentBlockhash: (await this.connection.getLatestBlockhash()).blockhash,
+      instructions: [
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: 100_000,
+        }),
+        ComputeBudgetProgram.setComputeUnitPrice({
+          microLamports: 200_000,
+        }),
+        createBetIx,
+      ],
+    }).compileToV0Message();
+    const createBetTx = new VersionedTransaction(createBetMessage);
+    this.userWallet.signTransaction(createBetTx);
+    const signature = await this.provider.sendAndConfirm(createBetTx);
+
+    return signature;
+  }
+
+  async matchBet(marketId: PublicKey, amount: number) {
+    const betCount = (await this.findBetCountForMarket(marketId)).toNumber();
+
+    const [bet] = PublicKey.findProgramAddressSync(
+      [Buffer.from("bet"), Buffer.from((betCount + 1).toString())],
+      this.program.programId
+    );
+
+    const betEscrow = getAssociatedTokenAddressSync(USDC_MINT, bet);
+
+    const matcherTokenAccount = getAssociatedTokenAddressSync(
+      USDC_MINT,
+      this.userWallet.publicKey
+    );
+
+    const matchBetIx = await this.program.methods
       .matchBet()
       .accounts({
-        matcher,
-        bet,
         betEscrow,
         matcherTokenAccount,
       })
-      .rpc();
+      .instruction();
 
-    return tx;
+    const matchBetMessage = new TransactionMessage({
+      payerKey: this.userWallet.publicKey,
+      recentBlockhash: (await this.connection.getLatestBlockhash()).blockhash,
+      instructions: [
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: 100_000,
+        }),
+        ComputeBudgetProgram.setComputeUnitPrice({
+          microLamports: 200_000,
+        }),
+        matchBetIx,
+      ],
+    }).compileToV0Message();
+    const matchBetTx = new VersionedTransaction(matchBetMessage);
+    this.userWallet.signTransaction(matchBetTx);
+    const signature = await this.provider.sendAndConfirm(matchBetTx);
+
+    return signature;
   }
 
-  /**
-   * Settle a bet
-   */
-  async settleBet(
-    bet: PublicKey,
-    market: PublicKey,
-    priceFeed: PublicKey
-  ): Promise<string> {
-    const authority = this.provider.wallet.publicKey;
+  async claimFunds(marketId: PublicKey) {
+    const betCount = (await this.findBetCountForMarket(marketId)).toNumber();
 
-    const tx = await this.program.methods
-      .settleBet()
-      .accounts({
-        authority,
-        bet,
-        market,
-        priceFeed,
-      })
-      .rpc();
+    const [bet] = PublicKey.findProgramAddressSync(
+      [Buffer.from("bet"), Buffer.from((betCount + 1).toString())],
+      this.program.programId
+    );
 
-    return tx;
-  }
+    const betEscrow = getAssociatedTokenAddressSync(USDC_MINT, bet);
 
-  /**
-   * Claim funds from a settled bet
-   */
-  async claimFunds(
-    bet: PublicKey,
-    betEscrow: PublicKey,
-    claimerTokenAccount: PublicKey
-  ): Promise<string> {
-    const claimer = this.provider.wallet.publicKey;
+    const claimerTokenAccount = getAssociatedTokenAddressSync(
+      USDC_MINT,
+      this.userWallet.publicKey
+    );
 
-    const tx = await this.program.methods
+    const feeRecipientTokenAccount = getAssociatedTokenAddressSync(
+      USDC_MINT,
+      ADMIN_ADDRESS
+    );
+
+    const claimBetIx = await this.program.methods
       .claimFunds()
       .accounts({
-        claimer,
-        bet,
         betEscrow,
         claimerTokenAccount,
+        feeRecipientTokenAccount,
       })
-      .rpc();
+      .instruction();
 
-    return tx;
-  }
+    const claimBetMessage = new TransactionMessage({
+      payerKey: this.userWallet.publicKey,
+      recentBlockhash: (await this.connection.getLatestBlockhash()).blockhash,
+      instructions: [claimBetIx],
+    }).compileToV0Message();
 
-  /**
-   * Fetch a betting market account
-   */
-  async fetchMarket(marketPda: PublicKey): Promise<BettingMarket> {
-    return this.program.account.bettingMarket.fetch(
-      marketPda
-    ) as unknown as BettingMarket;
-  }
+    const claimBetTx = new VersionedTransaction(claimBetMessage);
+    this.userWallet.signTransaction(claimBetTx);
+    const signature = await this.provider.sendAndConfirm(claimBetTx);
 
-  /**
-   * Fetch a bet account
-   */
-  async fetchBet(betPda: PublicKey): Promise<Bet> {
-    return this.program.account.bet.fetch(betPda) as unknown as Bet;
-  }
-
-  /**
-   * Fetch all bets for a market
-   */
-  async fetchMarketBets(market: PublicKey): Promise<Bet[]> {
-    const bets = await this.program.account.bet.all([
-      {
-        memcmp: {
-          offset: 8, // After discriminator
-          bytes: market.toBase58(),
-        },
-      },
-    ]);
-    return bets.map((bet) => bet.account) as unknown as Bet[];
-  }
-
-  /**
-   * Fetch all bets for a user
-   */
-  async fetchUserBets(user: PublicKey): Promise<Bet[]> {
-    const bets = await this.program.account.bet.all([
-      {
-        memcmp: {
-          offset: 8 + 32, // After discriminator and market
-          bytes: user.toBase58(),
-        },
-      },
-    ]);
-    return bets.map((bet) => bet.account) as unknown as Bet[];
+    return signature;
   }
 }

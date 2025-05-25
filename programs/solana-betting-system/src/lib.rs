@@ -19,21 +19,21 @@ const ADMIN: &str = "8kvqgxQG77pv6RvEou8f2kHSWi3rtx8F7MksXUqNLGmn";
 pub const USDC_MINT: &str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 #[program]
-pub mod betfriend {
+pub mod friendbet {
     use super::*;
 
     #[access_control(enforce_admin(ctx.accounts.authority.key))]
     pub fn initialize_market(
         ctx: Context<InitializeMarket>,
         token_name: String,
-        oracle_address: Pubkey,
         fee_claimer: Pubkey,
+        feed_id_hex: String,
     ) -> Result<()> {
         instructions::initialize_market::initialize_market(
             ctx,
             token_name,
-            oracle_address,
             fee_claimer,
+            feed_id_hex,
         )
     }
 

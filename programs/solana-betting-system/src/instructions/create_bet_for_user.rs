@@ -21,7 +21,7 @@ pub struct CreateBetForUser<'info> {
 
     #[account(
         mut,
-        seeds = [b"market", market.oracle_address.as_ref()],
+        seeds = [b"market", &market.feed_id[..8]],
         bump = market.bump
     )]
     pub market: Account<'info, BettingMarket>,
@@ -84,9 +84,13 @@ pub fn create_bet_for_user(
 
     // If funding immediately, validate the funder token account
     if fund_immediately {
-
         let cpi_accounts = Transfer {
-            from: ctx.accounts.funder_token_account.as_ref().unwrap().to_account_info(),
+            from: ctx
+                .accounts
+                .funder_token_account
+                .as_ref()
+                .unwrap()
+                .to_account_info(),
             to: ctx.accounts.bet_escrow.to_account_info(),
             authority: ctx.accounts.admin.to_account_info(),
         };

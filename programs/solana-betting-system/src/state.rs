@@ -6,7 +6,7 @@ pub struct BettingMarket {
     pub authority: Pubkey,
     pub fee_claimer: Pubkey, // Added: The account that can claim fees
     pub token_name: String,  // Name of the asset (BTC, ETH, etc.)
-    pub oracle_address: Pubkey,
+    pub feed_id: [u8; 32],   // Pyth price feed ID as 32-byte array
     pub bet_count: u64,
     pub total_volume: u64,         // Total volume of USDC ever bet
     pub total_matched_count: u64,  // Total number of bets that were matched
@@ -20,7 +20,7 @@ impl BettingMarket {
         32 +               // authority
         32 +               // fee_claimer
         4 + 32 +           // token_name (max length assumed to be 32)
-        32 +               // oracle_address
+        32 +               // feed_id (32 bytes)
         8 +                // bet_count
         8 +                // total_volume
         8 +                // total_matched_count

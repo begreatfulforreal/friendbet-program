@@ -1,12 +1,12 @@
 [package]
 description = "Created with Anchor"
 edition = "2021"
-name = "betfriend"
+name = "friendbet"
 version = "0.1.0"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "betfriend"
+name = "friendbet"
 
 [features]
 cpi = ["no-entrypoint"]
@@ -21,4 +21,4 @@ test = []
 anchor-lang = "0.31.1"
 anchor-spl = "0.31.1"
 proc-macro2 = "=1.0.94"
-pyth-sdk-solana = "0.10.4"
+pyth-solana-receiver-sdk = "0.6.1"

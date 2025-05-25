@@ -19,7 +19,7 @@ pub struct ClaimFunds<'info> {
 
     #[account(
         mut,
-        seeds = [b"market", market.oracle_address.as_ref()],
+        seeds = [b"market", &market.feed_id[..8]],
         bump = market.bump,
         constraint = market.key() == bet.market
     )]
