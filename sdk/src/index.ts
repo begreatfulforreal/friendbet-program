@@ -1,4 +1,11 @@
-import { AnchorProvider, BN, Idl, IdlAccounts, Program, Wallet } from "@coral-xyz/anchor";
+import {
+  AnchorProvider,
+  BN,
+  Idl,
+  IdlAccounts,
+  Program,
+  Wallet,
+} from "@coral-xyz/anchor";
 import {
   ComputeBudgetProgram,
   Connection,
@@ -9,18 +16,34 @@ import {
   TransactionMessage,
   VersionedTransaction,
 } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress, getAssociatedTokenAddressSync } from "@solana/spl-token";
-import idl from "../../target/idl/friendbet.json" with { type: "json" };
-import type {Friendbet} from "../../target/types/friendbet";
+import {
+  TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+  getAssociatedTokenAddressSync,
+} from "@solana/spl-token";
+import idl from "../../target/idl/friendbet.json";
+import type { Friendbet } from "../../target/types/friendbet";
+import * as fs from "fs";
 
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-const ADMIN_ADDRESS = new PublicKey("8kvqgxQG77pv6RvEou8f2kHSWi3rtx8F7MksXUqNLGmn");
+const ADMIN_ADDRESS = new PublicKey(
+  "8kvqgxQG77pv6RvEou8f2kHSWi3rtx8F7MksXUqNLGmn"
+);
 
 export enum PriceDirection {
   Above,
   Below,
 }
 
+export function getKeypairFromFile(filePath: String): Keypair {
+  return Keypair.fromSecretKey(
+    Uint8Array.from(
+      JSON.parse(
+        process.env.KEYPAIR || fs.readFileSync(filePath.toString(), "utf-8")
+      )
+    )
+  );
+}
 export class FriendbetSDK {
   private program: Program<Friendbet>;
   private programId: PublicKey;
@@ -48,11 +71,18 @@ export class FriendbetSDK {
   }
 
   /**
+   * Get the program ID
+   */
+  getProgramId(): PublicKey {
+    return this.programId;
+  }
+
+  /**
    * Find a market account PDA
    */
   async findMarketAddress(feedIdHex: string): Promise<[PublicKey, number]> {
     // Convert hex string to bytes and take first 8 bytes for PDA derivation
-    const feedIdBytes = Buffer.from(feedIdHex.replace('0x', ''), 'hex');
+    const feedIdBytes = Buffer.from(feedIdHex.replace("0x", ""), "hex");
     return PublicKey.findProgramAddressSync(
       [Buffer.from("market"), feedIdBytes.subarray(0, 8)],
       this.programId
@@ -106,9 +136,7 @@ export class FriendbetSDK {
   }
 
   async findBetCountForMarket(marketId: PublicKey) {
-    const market = await this.program.account.bettingMarket.fetch(
-      marketId
-    );
+    const market = await this.program.account.bettingMarket.fetch(marketId);
     return market.betCount;
   }
 
