@@ -39,8 +39,7 @@ pub struct CreateBet<'info> {
     pub usdc_mint: Account<'info, token::Mint>,
 
     #[account(
-        init,
-        payer = better,
+        mut,
         token::mint = usdc_mint,
         token::authority = bet,
     )]

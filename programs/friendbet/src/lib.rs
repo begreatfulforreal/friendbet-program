@@ -89,6 +89,10 @@ pub mod friendbet {
     pub fn claim_funds(ctx: Context<ClaimFunds>) -> Result<()> {
         instructions::claim_funds::claim_funds(ctx)
     }
+
+    pub fn close_bet(ctx: Context<CloseBet>) -> Result<()> {
+        instructions::close_bet::close_bet(ctx)
+    }
 }
 
 fn enforce_admin(key: &Pubkey) -> Result<()> {
