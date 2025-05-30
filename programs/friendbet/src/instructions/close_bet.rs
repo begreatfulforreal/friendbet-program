@@ -28,7 +28,6 @@ pub struct CloseBet<'info> {
 
     #[account(
         mut,
-        close = better,
         constraint = bet_escrow.key() == bet.escrow
     )]
     pub bet_escrow: Account<'info, TokenAccount>,
@@ -65,6 +64,9 @@ pub fn close_bet(ctx: Context<CloseBet>) -> Result<()> {
         ),
         ctx.accounts.bet_escrow.amount,
     )?;
+
+    // Close the bet account
+    ctx.accounts.bet.close(ctx.accounts.better.to_account_info())?;
 
     // Update market stats
     market.total_volume = market.total_volume.checked_sub(bet.amount).unwrap();
