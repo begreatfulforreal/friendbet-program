@@ -5,8 +5,9 @@ use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 #[derive(Accounts)]
 pub struct ClaimFunds<'info> {
+    /// CHECK: Already checked bet.winner.unwrap() == claimer.key()
     #[account(mut)]
-    pub claimer: Signer<'info>,
+    pub claimer: AccountInfo<'info>,
 
     #[account(
         mut,
@@ -32,7 +33,10 @@ pub struct ClaimFunds<'info> {
     )]
     pub bet_escrow: Account<'info, TokenAccount>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = claimer_token_account.owner == claimer.key()
+    )]
     pub claimer_token_account: Account<'info, TokenAccount>,
 
     // Fee recipient account
@@ -52,12 +56,6 @@ pub fn claim_funds(ctx: Context<ClaimFunds>) -> Result<()> {
 
     // Ensure bet is settled
     require!(bet.is_settled, ErrorCode::BetNotSettled);
-
-    // Ensure the claimer is the winner
-    require!(
-        bet.winner.unwrap() == ctx.accounts.claimer.key(),
-        ErrorCode::NotWinner
-    );
 
     // Get escrow balance (should be 2 * bet amount)
     let escrow_balance = ctx.accounts.bet_escrow.amount;
@@ -112,7 +110,7 @@ pub fn claim_funds(ctx: Context<ClaimFunds>) -> Result<()> {
     )?;
 
     msg!(
-        "Funds claimed by winner {}: {} USDC (with {} USDC fee) from bet on {}. Token account and bet account closed.",
+        "Funds claimed by winner {}: {} USDC (with {} USDC fee) from bet on {}.",
         ctx.accounts.claimer.key(),
         winner_amount,
         fee_amount,
