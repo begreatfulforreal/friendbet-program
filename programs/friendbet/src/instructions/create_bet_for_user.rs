@@ -18,6 +18,8 @@ use std::str::FromStr;
 pub struct CreateBetForUser<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
+    #[account(mut)]
+    pub funder: Signer<'info>,
 
     #[account(
         mut,
@@ -41,8 +43,7 @@ pub struct CreateBetForUser<'info> {
     pub usdc_mint: Account<'info, token::Mint>,
 
     #[account(
-        init,
-        payer = admin,
+        mut,
         token::mint = usdc_mint,
         token::authority = bet,
     )]
@@ -92,7 +93,7 @@ pub fn create_bet_for_user(
                 .unwrap()
                 .to_account_info(),
             to: ctx.accounts.bet_escrow.to_account_info(),
-            authority: ctx.accounts.admin.to_account_info(),
+            authority: ctx.accounts.funder.to_account_info(),
         };
         let cpi_program = ctx.accounts.token_program.to_account_info();
         let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);

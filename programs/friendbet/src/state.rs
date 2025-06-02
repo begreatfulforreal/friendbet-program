@@ -44,6 +44,7 @@ impl BettingMarket {
         8 +                // total_fees_collected
         1; // bump
 
+
     /// Set token name from a string, truncating if necessary
     pub fn set_token_name(&mut self, name: &str) {
         let bytes = name.as_bytes();
