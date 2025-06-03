@@ -2,16 +2,18 @@ use anchor_lang::prelude::*;
 
 #[account]
 pub struct BettingMarket {
+    pub bump: u8,
     pub authority: Pubkey,
-    pub fee_claimer: Pubkey,  // Added: The account that can claim fees
-    pub token_name: [u8; 40], // Name of the asset (BTC, ETH, etc.) - fixed 40 bytes
-    pub feed_id: [u8; 32],    // Pyth price feed ID as 32-byte array
+    pub fee_claimer: Pubkey,    // Added: The account that can claim fees
+    pub token_name: [u8; 40],   // Name of the asset (BTC, ETH, etc.) - fixed 40 bytes
+    pub feed_id: [u8; 32],      // Pyth price feed ID as 32-byte array
+    pub oracle_account: Pubkey, // Pyth account
     pub bet_count: u64,
     pub total_volume: u64,         // Total volume of USDC ever bet
     pub total_matched_count: u64,  // Total number of bets that were matched
     pub total_settled_count: u64,  // Total number of bets that were settled
     pub total_fees_collected: u64, // Total fees collected in USDC
-    pub bump: u8,
+    pub _reserved: [u64; 10],
 }
 
 impl Default for BettingMarket {
@@ -21,29 +23,32 @@ impl Default for BettingMarket {
             fee_claimer: Pubkey::default(),
             token_name: [0u8; 40],
             feed_id: [0u8; 32],
+            oracle_account: Pubkey::default(),
             bet_count: 0,
             total_volume: 0,
             total_matched_count: 0,
             total_settled_count: 0,
             total_fees_collected: 0,
             bump: 0,
+            _reserved: [0u64; 10],
         }
     }
 }
 
 impl BettingMarket {
     pub const LEN: usize = 8 + // discriminator
+        1 + // bump
         32 +               // authority
         32 +               // fee_claimer
         40 +               // token_name (fixed 40 bytes)
         32 +               // feed_id (32 bytes)
+        32 +               // pyth account (32 bytes)
         8 +                // bet_count
         8 +                // total_volume
         8 +                // total_matched_count
         8 +                // total_settled_count
         8 +                // total_fees_collected
-        1; // bump
-
+        80; // _reserved (10 u64s)
 
     /// Set token name from a string, truncating if necessary
     pub fn set_token_name(&mut self, name: &str) {
@@ -66,6 +71,7 @@ impl BettingMarket {
 #[account]
 #[derive(Default)]
 pub struct Bet {
+    pub bump: u8,
     pub market: Pubkey,
     pub better: Pubkey,
     pub amount: u64,
@@ -80,7 +86,6 @@ pub struct Bet {
     pub matcher: Option<Pubkey>,
     pub escrow: Pubkey,
     pub bet_count: u64, // Store the bet count used in PDA derivation
-    pub bump: u8,
 }
 
 impl Bet {

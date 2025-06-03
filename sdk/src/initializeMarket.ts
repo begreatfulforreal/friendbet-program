@@ -4,6 +4,8 @@ import { FriendbetSDK, getKeypairFromFile } from "./index";
 async function main() {
   // throw error if RPC_URL or ANCHOR_KEYPAIR is not set
   if (!process.env.SOLANA_RPC_URL || !process.env.ANCHOR_WALLET) {
+    console.log(process.env.SOLANA_RPC_URL);
+    console.log(process.env.ANCHOR_WALLET);
     throw new Error("RPC_URL or ANCHOR_KEYPAIR is not set");
   }
 
@@ -13,10 +15,20 @@ async function main() {
 
   const client = new FriendbetSDK(connection, wallet);
 
-  const feedIdHex =
-    "0x4279e31cc369bbcc2faf022b382b080e32a8e689ff20fbc530d2a603eb6cd98b";
-  const ethIdHex =
+  const solFeedIdHex =
+    "0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d";
+  const ethFeedIdHex =
     "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace";
+  const solPriceUpdate = new PublicKey(
+    "7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE"
+  );
+  const ethPriceUpdate = new PublicKey(
+    "42amVS4KgzR9rA28tkVYqVXjq9Qa8dcZQMbH5EYFX6XC"
+  );
+
+  const feedName = "ETH/USD";
+  const priceUpdate = ethPriceUpdate;
+  const feedIdHex = ethFeedIdHex;
 
   // Debug: Let's see what our SDK generates
   const [marketPda, bump] = await client.findMarketAddress(feedIdHex);
@@ -36,9 +48,10 @@ async function main() {
   console.log("Program ID being used: [checking...]");
 
   const marketId = await client.initializeMarket(
-    "HYPE/USD",
+    feedName,
     new PublicKey("8kvqgxQG77pv6RvEou8f2kHSWi3rtx8F7MksXUqNLGmn"),
-    feedIdHex
+    feedIdHex,
+    priceUpdate
   );
 
   console.log(marketId);

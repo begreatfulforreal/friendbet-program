@@ -40,4 +40,8 @@ pub enum ErrorCode {
     BetAlreadyFunded,
     #[msg("Bet is not funded yet")]
     BetNotFunded,
+    #[msg("Only the original better or admin can close the bet")]
+    UnauthorizedCloser,
+    #[msg("Invalid better account")]
+    InvalidBetter,
 }

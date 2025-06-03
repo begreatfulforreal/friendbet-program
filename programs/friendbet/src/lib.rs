@@ -10,7 +10,7 @@ use errors::ErrorCode;
 use instructions::*;
 use state::*;
 
-declare_id!("friDwUtQJPFgJ14V4kH5ttdpEFNz4dQcL2ySUswUczu");
+declare_id!("FBetpwxpVKNDMxsdC4QzvpW5NmAqpGEEvuLpU9gUCM1n");
 
 // Admin pubkey constant - replace with your actual admin pubkey
 const ADMIN: &str = "8kvqgxQG77pv6RvEou8f2kHSWi3rtx8F7MksXUqNLGmn";
@@ -37,22 +37,6 @@ pub mod friendbet {
         )
     }
 
-    pub fn create_bet(
-        ctx: Context<CreateBet>,
-        bet_amount: u64,
-        price_threshold: u64,
-        price_direction: PriceDirection,
-        settlement_time: i64,
-    ) -> Result<()> {
-        instructions::create_bet::create_bet(
-            ctx,
-            bet_amount,
-            price_threshold,
-            price_direction,
-            settlement_time,
-        )
-    }
-
     #[access_control(enforce_admin(ctx.accounts.admin.key))]
     pub fn create_bet_for_user(
         ctx: Context<CreateBetForUser>,
@@ -71,6 +55,22 @@ pub mod friendbet {
             settlement_time,
             better_pubkey,
             fund_immediately,
+        )
+    }
+
+    pub fn create_bet(
+        ctx: Context<CreateBet>,
+        bet_amount: u64,
+        price_threshold: u64,
+        price_direction: PriceDirection,
+        settlement_time: i64,
+    ) -> Result<()> {
+        instructions::create_bet::create_bet(
+            ctx,
+            bet_amount,
+            price_threshold,
+            price_direction,
+            settlement_time,
         )
     }
 

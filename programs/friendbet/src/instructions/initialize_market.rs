@@ -1,6 +1,6 @@
 use crate::state::BettingMarket;
 use anchor_lang::prelude::*;
-use pyth_solana_receiver_sdk::price_update::get_feed_id_from_hex;
+use pyth_solana_receiver_sdk::price_update::{get_feed_id_from_hex, PriceUpdateV2};
 
 #[derive(Accounts)]
 #[instruction(token_name: String, fee_claimer: Pubkey, feed_id_hex: String)]
@@ -16,6 +16,10 @@ pub struct InitializeMarket<'info> {
         bump
     )]
     pub market: Account<'info, BettingMarket>,
+
+    /// Check: The Pyth price update account
+    #[account()]
+    pub price_update: Account<'info, PriceUpdateV2>,
 
     pub system_program: Program<'info, System>,
 }
@@ -33,6 +37,7 @@ pub fn initialize_market(
     market.fee_claimer = fee_claimer;
     market.set_token_name(&token_name);
     market.feed_id = feed_id_bytes;
+    market.oracle_account = ctx.accounts.price_update.key();
     market.bet_count = 0;
     market.total_volume = 0;
     market.total_matched_count = 0;
@@ -40,9 +45,5 @@ pub fn initialize_market(
     market.total_fees_collected = 0;
     market.bump = ctx.bumps.market;
 
-    msg!(
-        "Betting market initialized for {} using USDC for bets",
-        market.get_token_name()
-    );
     Ok(())
 }

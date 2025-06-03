@@ -40,6 +40,9 @@ pub struct SettleBet<'info> {
     pub market: Account<'info, BettingMarket>,
 
     /// The Pyth price update account
+    #[account(
+        address = market.oracle_account,
+    )]
     pub price_update: Account<'info, PriceUpdateV2>,
 }
 

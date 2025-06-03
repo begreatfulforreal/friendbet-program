@@ -112,7 +112,8 @@ export class FriendbetSDK {
   async initializeMarket(
     tokenName: string,
     feeClaimer: PublicKey,
-    feedIdHex: string
+    feedIdHex: string,
+    priceUpdate: PublicKey
   ): Promise<string> {
     const authority = this.provider.wallet.publicKey;
     const [marketPda, _] = await this.findMarketAddress(feedIdHex);
@@ -122,6 +123,7 @@ export class FriendbetSDK {
       .accounts({
         authority,
         market: marketPda,
+        priceUpdate,
       })
       .rpc();
 
@@ -150,6 +152,7 @@ export class FriendbetSDK {
       USDC_MINT,
       this.userWallet.publicKey
     );
+    const betEscrow = getAssociatedTokenAddressSync(USDC_MINT, bet);
 
     const createBetIx = await this.program.methods
       .createBet(new BN(amount), new BN(0), { above: {} }, new BN(0))
@@ -158,6 +161,7 @@ export class FriendbetSDK {
         betterTokenAccount,
         bet,
         usdcMint: USDC_MINT,
+        betEscrow,
       })
       .instruction();
 
@@ -246,6 +250,7 @@ export class FriendbetSDK {
         betEscrow,
         claimerTokenAccount,
         feeRecipientTokenAccount,
+        claimer: ADMIN_ADDRESS,
       })
       .instruction();
 
@@ -258,6 +263,42 @@ export class FriendbetSDK {
     const claimBetTx = new VersionedTransaction(claimBetMessage);
     this.userWallet.signTransaction(claimBetTx);
     const signature = await this.provider.sendAndConfirm(claimBetTx);
+
+    return signature;
+  }
+
+  async closeBet(marketId: PublicKey, better: PublicKey) {
+    const betCount = (await this.findBetCountForMarket(marketId)).toNumber();
+
+    const [bet] = await this.findBetAddress(marketId, new BN(betCount));
+    const betEscrow = getAssociatedTokenAddressSync(USDC_MINT, bet, true);
+    const betterTokenAccount = getAssociatedTokenAddressSync(
+      USDC_MINT,
+      better
+    );
+
+    const closeBetIx = await this.program.methods
+      .closeBet()
+      .accountsPartial({
+        bet,
+        better,
+        closer: this.userWallet.publicKey,
+        market: marketId,
+        betEscrow,
+        betterTokenAccount,
+      })
+      .instruction();
+
+    const closeBetMessage = new TransactionMessage({
+      payerKey: this.userWallet.publicKey,
+      recentBlockhash: (await this.connection.getLatestBlockhash()).blockhash,
+      instructions: [closeBetIx],
+    }).compileToV0Message();
+
+    const closeBetTx = new VersionedTransaction(closeBetMessage);
+
+    this.userWallet.signTransaction(closeBetTx);
+    const signature = await this.provider.sendAndConfirm(closeBetTx);
 
     return signature;
   }
